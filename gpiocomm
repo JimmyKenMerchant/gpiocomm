@@ -1,0 +1,210 @@
+#!/bin/bash
+#Copyright 2015 Kenta Ishii All Rights Reserved.
+#This Shell Script is for Raspbian on Raspberry Pi 2 Type B and licensed under GNU License.
+#Written by Kenta Ishii, Tokyo.
+#Make sure to change permissions of this file. e.g. chmod 0744 gpiocomm.
+#CAUTION! This software and Kenta Ishii are exempt from all warranty and all compensation caused by all damage as a result of using this software. 
+#CAUTION! Don't use gpio pins which your Raspberry Pi's version DOES NOT serve as out-world I/O.
+#CAUTION! Avaiable pins of Raspberry Pi 2 Type B is No.2 to No.27. Otherwise, you'll meet fatal mess...
+
+DEST="/sys/class/gpio"
+readonly DEST
+MINPIN=2
+readonly MINPIN
+MAXPIN=27
+readonly MAXPIN
+
+#Initially, to use pins, make a pin enable. First is pin's number, Second is in or out.
+__gpio_set () {
+    local pin=$1
+    local stat=$2
+    local file_dir=${DEST}/gpio${pin}
+    local pin_value=2
+
+    echo $pin > ${DEST}/export
+
+    #NEED SPACE AS FOLLWS
+    while [ ! -e $file_dir ]
+    do
+        echo -e "%Cheking...\n"
+    done
+
+    #NEED SLLEP IN ANY WAY
+    sleep 0.5
+
+    if [ -e $file_dir ]; then
+        #Wild card is to default
+        case "$stat" in
+            "in")
+                echo $stat > ${file_dir}/direction
+                pin_value=$(cat ${file_dir}/value)
+            ;;
+            "out")
+                echo $stat > ${file_dir}/direction
+                pin_value=$(cat ${file_dir}/value)
+            ;;
+            * ) echo -e "%Wrong Status..."
+                return -1 
+            ;;
+        esac
+    else
+       return -1 
+    fi
+
+    return $pin_value
+}
+
+gpio_set () {
+    echo -e "%Pin's number?"
+    read pin_number
+    if [ ! $pin_number -lt $MINPIN ] && [ ! $pin_number -gt $MAXPIN ]; then
+        echo -e "%in or out?"
+        read pin_status
+        if [ "$pin_status" = "in" ] || [ "$pin_status" = "out" ]; then
+            __gpio_set $pin_number $pin_status
+            local ret=$?
+            echo -e "%Pin${pin_number}'s Status: $pin_status"
+            echo -e "%Pin${pin_number}'s Value: $ret"
+            return 0
+        else
+            echo -e "%Wrong Status..."
+            return 1
+        fi
+    else
+        echo -e "%Wrong Number..."
+        return 1
+    fi
+}
+
+#To End, unset a pin. First is pin's number
+__gpio_unset () {
+    local pin=$1
+    echo $pin > ${DEST}/unexport      
+}
+
+gpio_unset () {
+    echo -e "%Pin's number?"
+    read pin_number
+    if [ ! $pin_number -lt $MINPIN ] && [ ! $pin_number -gt $MAXPIN ]; then
+        __gpio_unset $pin_number
+        ret=$?
+        if [ $ret == 0 ]; then
+            echo -e "%Unset gpio${pin_number} successfully"
+            return 0
+        else
+            echo -e "%Error in Unsettting gpio${pin_number}..."
+            return 1
+        fi
+    else
+        echo -e "%Wrong Number..."
+        return 1
+    fi
+}
+
+#Send high or low only at output pins.
+__gpio_signal () {
+    local pin=$1
+    local file_dir=${DEST}/gpio${pin}
+    local value=$2
+    echo $value > ${file_dir}/value
+}
+
+gpio_signal () {
+    echo -e "%Pin's number?"
+    read pin_number
+
+    if [ ! $pin_number -lt $MINPIN ] && [ ! $pin_number -gt $MAXPIN ]; then
+        echo -e "%High (1) or Low (0) ?"
+        read pin_value
+        if [ $pin_value -eq 0 ] || [ $pin_value -eq 1 ]; then
+            __gpio_signal $pin_number $pin_value
+            ret=$?
+            if [ $ret == 0 ]; then
+                echo -e "%Signaled gpio${pin_number} successfully"
+                return 0
+            else
+                echo -e "%Error in signaling gpio${pin_number}..."
+                return 1
+            fi
+        else
+            echo -e "%Press 1 or 0..."
+            return 1
+        fi
+    else
+        echo -e "%Wrong Number..."
+        return 1
+    fi
+}
+
+#Check value of a pin.
+__gpio_value () {
+    local pin=$1
+    local file_dir=${DEST}/gpio${pin}
+    cat ${file_dir}/value
+}
+
+gpio_value () {
+    echo -e "%Pin's number?"
+    read pin_number
+    __gpio_value $pin_number
+}
+
+#Show the list of enable pins.
+gpio_list () {
+    local i=$MINPIN
+    while [ $i -le $MAXPIN ]
+    do
+        local word="gpio${i}"
+
+        #You should use find rather than grep which is for a raw serching
+        local result=$(find ${DEST} -name "${word}")
+        if [ $result ]; then
+            local file_dir=${DEST}/gpio${i}
+            local stat=$(cat ${file_dir}/direction)
+            local value=$(cat ${file_dir}/value)
+            echo -e "No.${i} I/O ${stat} Value ${value}"
+            #Make Sure to Back quotation mark
+            i=`expr $i + 1`
+        else
+            i=`expr $i + 1`
+        fi
+    done
+}
+
+#Interactive loop
+main () {
+    while :
+    do
+        echo -e "\n%setup/unset/list/value/signal/exit"
+        read comm
+        if [ "$comm" = "exit" ]; then
+            break
+        fi
+
+        case "$comm" in
+            "setup")
+                gpio_set
+            ;;
+            "unset")
+                gpio_unset
+            ;;
+            "list")
+                gpio_list
+            ;;
+            "value")
+                gpio_value
+            ;;
+            "signal")
+                gpio_signal
+            ;;
+            * )
+                echo -e "%Type Anything Good"
+            ;;
+        esac
+    done
+}
+
+if [ ! "$1" = "--functions" ]; then
+    echo -e "\n\t[GPIO Interactive Commands Ver1.0]\n\tCopyright 2015 Kenta Ishii All Rights Reserved."
+    main
+fi
