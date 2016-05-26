@@ -1,11 +1,10 @@
 #!/bin/bash
 #Copyright 2015 Kenta Ishii All Rights Reserved.
-#This Shell Script is for Raspbian on Raspberry Pi 2 Type B and licensed under GNU License.
+#This Shell Script is for Raspbian Jessie on Raspberry Pi 2 Model B and licensed under GNU License.
 #Written by Kenta Ishii, Tokyo.
-#Make sure to change permissions of this file. e.g. chmod 0744 gpiocomm.
-#CAUTION! This software and Kenta Ishii are exempt from all warranty and all compensation caused by all damage as a result of using this software. 
-#CAUTION! Don't use gpio pins which your Raspberry Pi's version DOES NOT serve as out-world I/O.
-#CAUTION! Avaiable pins of Raspberry Pi 2 Type B is No.2 to No.27. Otherwise, you'll meet fatal mess...
+#Make sure to change permissions of this file. e.g. chmod 0744 gpiomonitor
+#If you meet any freezen shell, interrupt through ctrl+c or so...
+#CAUTION! This software and Kenta Ishii are exempt from all warranty and all compensation caused by all damage as a result of using this software.
 
 source gpiocomm --functions
 
@@ -15,5 +14,6 @@ while :
 do
     date +%Hh-%Mm-%Ss-%Nns
     gpio_list
-    sleep 0.01
+    #Speed is slow, even you set 0.01.
+    sleep 0.5
 done
